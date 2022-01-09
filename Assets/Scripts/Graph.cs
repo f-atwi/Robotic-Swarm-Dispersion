@@ -66,40 +66,40 @@ public class Graph : MonoBehaviour
         Neighbors = cur_neighbors;
     }
 
-    List<GameObject> BronKerbosch(List<GameObject> P_init)
-    {
-        Stack<List<GameObject>[]> S = new Stack<List<GameObject>[]>();
-        List<GameObject>[] cur_layer = new List<GameObject>[3];
-        List<GameObject> R = new List<GameObject>(); ;
-        List<GameObject> P = new List<GameObject>(P_init);
-        List<GameObject> X = new List<GameObject>();
-        GameObject v;
+    List<GameObject> BronkerboshRec(List<GameObject> R, List<GameObject> P, List<GameObject> X)
+    {            //To be fixed, not all branches returns values
 
-        cur_layer[0] = R;
-        cur_layer[1] = P;
-        cur_layer[2] = X;
-        S.Push(cur_layer);
-        while (S.Count != 0)
+        if (P.Count == 0 && X.Count == 0)
+            return R;
+
+        int v_local_index;
+        foreach (GameObject v in P)
         {
-            cur_layer = S.Pop();
-            R = cur_layer[0];
-            P = cur_layer[1];
-            X = cur_layer[2];
-            if (P.Count == 0 && X.Count == 0)
-                return R;
-            if (P.Count != 0)
+            v_local_index = Neighbors.BinarySearch(v);
+
+            List<GameObject> nextR = new List<GameObject>(R);
+            if (!nextR.Contains(v))
+                nextR.Add(v);
+
+            List<GameObject> nextP = new List<GameObject>();               //Creating P inter N(v) and X inter N(v)
+            List<GameObject> nextX = new List<GameObject>();
+            foreach (Robot rob in NeighborsOfNeighbors[v_local_index])
             {
-                //not working
-                v = P[0];
-                P.RemoveAt(0);
-                cur_layer[0] = R;
-                cur_layer[1] = P;
-                cur_layer[2] = X;
-                S.Push(cur_layer);
+                if (P.Contains(rob))
+                    nextP.Add(rob);
+                if (X.Contains(rob))
+                    nextX.Add(rob);
             }
-            //Some remaining code idk T.T
+            BronkerboshRec(nextR, nextP, nextX);
+            P.Remove(v);
+            if (!X.Contains(v))
+                X.Add(v);
         }
-        return R;
+    }
+
+    List<GameObject> findMaxClique()
+    {
+        return BronkerboshRec(new List<GameObject>(), new List<GameObject>(Neighbors), new List<GameObject>());
     }
 
 
