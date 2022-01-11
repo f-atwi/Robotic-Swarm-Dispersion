@@ -9,7 +9,7 @@ public class Behavior:MonoBehaviour
 	private Robot robot;
 	private Graph graph;
 
-	private bool coroutine_running =false;
+	public bool coroutine_running =false;
 
 	private void Start()
 	{
@@ -74,8 +74,13 @@ public class Behavior:MonoBehaviour
 
 	IEnumerator main()
 	{
-	
+
 		graph.updateConnectivityGraph();
+
+		graph.findMaxClique();
+//		graph.chooseSentries();
+
+
 		int? detection_side = robot.wallDetection();
 		if ( !(detection_side is null))
 		{
@@ -91,6 +96,7 @@ public class Behavior:MonoBehaviour
 		}
 		else
 		{
+			Debug.Log(this.gameObject + " is a sentry");
 			guard();
 		}
 
