@@ -9,11 +9,21 @@ public class Behavior:MonoBehaviour
 	private Robot robot;
 	private Graph graph;
 
+	private bool coroutine_running =false;
+
 	private void Start()
 	{
 		robot = GetComponent<Robot>();
-		graph = this.gameObject.AddComponent<Graph>();
-		StartCoroutine(main());
+		graph = GetComponent<Graph>();
+	}
+
+    private void Update()
+    {
+		if (!coroutine_running)
+		{
+			coroutine_running = true;
+			StartCoroutine(main());
+		}
 	}
 	private void disperse() {
 		if (oldIntensity > graph.getSentryIntensity() || oldIntensity == -1) {
@@ -22,7 +32,7 @@ public class Behavior:MonoBehaviour
 		}
 		else {
 			robot.Linear_velocity = 2f;
-			robot.Angular_velocity = 10f;
+			robot.Angular_velocity = 10f *robot.sense;
 		}
 		oldIntensity = graph.getSentryIntensity();
 	}
@@ -35,7 +45,7 @@ public class Behavior:MonoBehaviour
 		if (graph.getNumberOfNeighbors() == 0 && seekAttempted)
 		{
 			robot.Linear_velocity = 2f;
-			robot.Angular_velocity = 30f;
+			robot.Angular_velocity = 30f * robot.sense;
 			seekAttempted = false;
 		}
 		else
@@ -44,10 +54,17 @@ public class Behavior:MonoBehaviour
 		}
 	}
 
-	private void avoidCollision()
+	private void avoidCollision(int side)
 	{
 		robot.Linear_velocity = 0;
-		robot.Angular_velocity = 30;
+		if (side == 0)
+		{
+			robot.Angular_velocity = 60 * robot.sense;
+		}
+		else
+		{
+			robot.Angular_velocity = 60 * -side;
+		}
 	}
 	
 	private void guard() {
@@ -57,26 +74,27 @@ public class Behavior:MonoBehaviour
 
 	IEnumerator main()
 	{
-		while (true)
+	
+		graph.updateConnectivityGraph();
+		int? detection_side = robot.wallDetection();
+		if ( !(detection_side is null))
 		{
-			if (robot.wallDetection())
-			{
-				avoidCollision();
-			}
-			else if (graph.getNumberOfNeighbors() == 0)
-			{
-				seekConnection();
-			}
-			else if (!graph.isSentry())
-			{
-				disperse();
-			}
-			else
-			{
-				guard();
-			}
-
+			avoidCollision((int)detection_side);
 		}
+		else if (graph.getNumberOfNeighbors() == 0)
+		{
+			seekConnection();
+		}
+		else if (!graph.isSentry())
+		{
+			disperse();
+		}
+		else
+		{
+			guard();
+		}
+
+		coroutine_running = false;
 		yield return null;
 	}
 	

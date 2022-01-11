@@ -5,19 +5,20 @@ using UnityEngine;
 public class Graph : MonoBehaviour
 {
 
-    int nbOfRobots;
-    GameObject[] robots;
-    float[] distances;
-    bool[] areNeighbor;
-    List<GameObject> Neighbors;
-
-    float neighborDistanceThreshold = 5f;
+    int nbOfRobots;                  //Total number of robots in the experience
+    GameObject[] robots;             //Array containing all the robots
+    float[] distances;               //Array containing distances from self to every other robot, ordered the same way as robots[] (ie distances[k] is the distance from self to robots[k]
+    bool[] areNeighbor;              //Boolean array, areNeighbor[k] is true iff robots[k] is a neighbor of self 
+    List<GameObject> Neighbors;      //List of neighbors of self
+    List<List<GameObject>> NeighborsOfNeighbors;     //List of list containing the neighbors of every neighbor of self, ordered the same way as Neighbors (the first element of NeighborsOfNeighbors is the list of the neibhbors of the first element of Neighbors
+    float neighborDistanceThreshold = 5f;    //Distance required to be considered neighbor
+    GameObject localSentry;          //Current sentry of self
+    List<List<GameObject>> Cliques;
 
     // Start is called before the first frame update
     void Start()
     {
         robots = GameObject.FindGameObjectsWithTag("robot");
-        // TODO : identify self
         if (robots.Length == 0)
             Debug.Log("No robots detected in Graph.Start()");
 
@@ -27,6 +28,8 @@ public class Graph : MonoBehaviour
         areNeighbor = new bool[nbOfRobots];
         for (int k = 0; k < areNeighbor.Length; k++)
             areNeighbor[k] = false;
+        Neighbors = new List<GameObject>();
+        NeighborsOfNeighbors = new List<List<GameObject>>();
         updateConnectivityGraph();
     }
 
@@ -43,8 +46,9 @@ public class Graph : MonoBehaviour
     }
 
 
-    void updateConnectivityGraph()
+    public void updateConnectivityGraph()
     {
+
         List<GameObject> cur_neighbors = new List<GameObject>();
         List<List<GameObject>> curNeighborsOfNeighbors = new List<List<GameObject>>();
         for (int k = 0; k < nbOfRobots; k++)
@@ -64,13 +68,16 @@ public class Graph : MonoBehaviour
             curNeighborsOfNeighbors.Add(neighbor.GetComponent<Graph>().Neighbors);
         }
         Neighbors = cur_neighbors;
+        NeighborsOfNeighbors = curNeighborsOfNeighbors;
+
     }
 
-    List<GameObject> BronkerboshRec(List<GameObject> R, List<GameObject> P, List<GameObject> X)
+
+    void BronkerboshRec(List<GameObject> R, List<GameObject> P, List<GameObject> X)
     {            //To be fixed, not all branches returns values
 
         if (P.Count == 0 && X.Count == 0)
-            return R;
+            Cliques.Add(R);
 
         int v_local_index;
         foreach (GameObject v in P)
@@ -83,12 +90,12 @@ public class Graph : MonoBehaviour
 
             List<GameObject> nextP = new List<GameObject>();               //Creating P inter N(v) and X inter N(v)
             List<GameObject> nextX = new List<GameObject>();
-            foreach (Robot rob in NeighborsOfNeighbors[v_local_index])
+            foreach (GameObject rob in NeighborsOfNeighbors[v_local_index])
             {
-                if (P.Contains(rob))
-                    nextP.Add(rob);
-                if (X.Contains(rob))
-                    nextX.Add(rob);
+                if (P.Contains((GameObject)rob))
+                    nextP.Add((GameObject)rob);
+                if (X.Contains((GameObject)rob))
+                    nextX.Add((GameObject)rob);
             }
             BronkerboshRec(nextR, nextP, nextX);
             P.Remove(v);
@@ -97,16 +104,23 @@ public class Graph : MonoBehaviour
         }
     }
 
-    List<GameObject> findMaxClique()
+    List<List<GameObject>> findMaxClique()
     {
-        return BronkerboshRec(new List<GameObject>(), new List<GameObject>(Neighbors), new List<GameObject>());
+        Cliques = new List<List<GameObject>>();
+        BronkerboshRec(new List<GameObject>(), new List<GameObject>(Neighbors), new List<GameObject>());
+        return Cliques;
     }
-
 
     public bool isSentry()
     {
-        //TODO
-        return true;
+        if(localSentry is null)
+        {
+            return false;
+        }
+        if (localSentry.GetInstanceID() == this.transform.parent.gameObject.GetInstanceID())
+            return true;
+        else
+            return false;
     }
 
     public int getNumberOfNeighbors()
@@ -116,7 +130,9 @@ public class Graph : MonoBehaviour
 
     public float getSentryIntensity()
     {
-        //TODO
-        return 2f;
+        if (localSentry is null)
+            return 0;
+        float dist = getDistance(localSentry);
+        return 1 / (dist * dist);
     }
 }
